@@ -1,8 +1,67 @@
 import numpy as np
-import utils
+import sys
+#import utils
+
+class PPCA(object):
+    
+    def __init__(self,latent_dim=None,method='full',n_iter = 100,keep_past=False):
+        
+        self.latent_dim = latent_dim
+        self.method_full = method=='full'
+        self.num_iter = n_iter
+        self.keep_hist = keep_past
+    def fit(self,data):
+
+        self.n_samples,self.dim = data.shape
+        
+        self.mu = np.mean(data,axis=0)
+        self.std = np.std(data,axis=0)
+        
+        self.data = data#-self.mu)/self.std
+        
+        self.S = np.cov(self.data,rowvar=False)
+                
+
+        self.likelihood = np.zeros(self.num_iter)
+        self.sigma2_hist = np.zeros(self.num_iter)
+        
+        self.sigma2 = np.trace(self.S)/self.dim
+        self.W = np.random.randn(self.dim,self.latent_dim)
+        #self.W[:self.latent_dim,:self.latent_dim] = np.eye(self.latent_dim)
+        for i in range(self.num_iter):
+        
+            sys.stdout.write('\r%d out of %d'%(i,self.num_iter))
+            sys.stdout.flush()
+            if self.keep_hist:
+                self.sigma2_hist[i] = self.sigma2
+                for row in range(len(self.X)):
+                    a = np.trace(self.sigma2*self.Minv+ np.outer(self.X[row],self.X[row]))
+                    b = np.sum((self.data[row]-self.mu)**2)/self.sigma2
+                    c = -2*np.dot(self.X[row],self.W.T.dot(self.data[row]-self.mu))/self.sigma2
+                    d = np.trace(self.W.T.dot(self.W).dot(np.outer(self.X[row],self.X[row])))/self.sigma2
+                    self.likelihood[i] += -(self.dim/2*np.log(self.sigma2)+a+b+c+d)/2
+            self.Minv = np.linalg.inv(self.sigma2*np.eye(self.latent_dim) + np.dot(self.W.T,self.W))
+
+            Wnew = self.S.dot(self.W).dot(np.linalg.inv(
+                        self.sigma2*np.eye(self.latent_dim) + self.Minv.dot(np.dot(self.W.T,self.S).dot(self.W))))
+
+            self.sigma2 = (np.trace(self.S) - np.trace(self.S.dot(np.dot(np.dot(self.W, self.Minv), Wnew.T))))/self.dim
+
+            self.W = Wnew
+            
+            self.X = self.Minv.dot(self.W.T.dot(self.data.T-self.mu.reshape(-1,1))).T
+            
+
+        self.data = None
+        self.X = None
+        
+    def transform(self,data):
+        return self.Minv.dot(self.W.T.dot(data.T-self.mu.reshape(-1,1))).T
+        
+        
 
 
-
+"""
 class MPPCA(object):
     
     def __init__(self,num_mixtures,latent_dim,niter):
@@ -129,10 +188,4 @@ class MPPCA(object):
         R = np.exp(logR)
     
         return R
-    
-class PPCA(object):
-    
-    def __init__(self,latent_dim):
-        
-        self.latent_dim = latent_dim
-    
+   """ 

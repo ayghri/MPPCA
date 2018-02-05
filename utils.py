@@ -50,16 +50,14 @@ def Kmeans(data, num_clusters, latent_dim, variance_level=None):
 
     # parameter initialization
     pi = np.zeros(num_clusters)
-    W = np.zeros((num_clusters, d, latent_dim))
     sigma2 = np.zeros(num_clusters)
     for c in range(num_clusters):
         #if variance_level:
         #    W[c, :, :] = variance_level * np.random.randn(d, latent_dim)
         #    sigma2[c] = np.abs((variance_level/10) * np.random.randn())
         #else:
-        W[c, :, :] = np.random.randn(d, latent_dim)
         sigma2[c] = (min_distances[clusters == c]).mean() / d
         pi[c] = (clusters == c).sum() / N
             
 
-    return pi, mus, sigma2, clusters, W 
+    return pi, mus, sigma2, clusters
